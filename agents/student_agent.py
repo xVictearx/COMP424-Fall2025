@@ -13,7 +13,7 @@ class StudentAgent(Agent):
   A class for your implementation. Feel free to use this class to
   add any helper functionalities needed for your agent.
   """
-
+  boards = []
   def __init__(self):
     super(StudentAgent, self).__init__()
     self.name = "StudentAgent"
@@ -34,18 +34,7 @@ class StudentAgent(Agent):
     if not legal_moves:
       return None  # No valid moves available, pass turn
     
-    duplicate_moves = []
-    jump_moves = []
-
-    for move in legal_moves:
-      at_row, at_col = move.get_src()
-      dest_row, dest_col = move.get_dest()
-
-      if dest_row - at_row == 2 or dest_col - at_col == 2:
-        jump_moves.append(move)
-      else:
-        duplicate_moves.append(move)
-    move_set = [duplicate_moves, jump_moves]
+    move_set = self.split_moves(legal_moves)
 
     a = float('-inf')
     b =  float('inf')
@@ -55,27 +44,29 @@ class StudentAgent(Agent):
     n = chess_board.shape[0] 
     at_row, at_col = 0, 0
     dest_row, dest_col = 0, 0
+    self.boards = []
     for moves in move_set:
       for move in moves:
+        
         pieces = np.count_nonzero(chess_board)
         enemy_pieces = np.count_nonzero(chess_board == opp)
         your_pieces = np.count_nonzero(chess_board == you)
         at_row, at_col = move.get_src()
         dest_row, dest_col = move.get_dest()
+      
+       
+          
+        sim_board = deepcopy(chess_board)
+
+        execute_move(sim_board, move, you)
         
-        if not(dest_row - at_row == 2 or dest_col - at_col == 2):
-          
-          sim_board = deepcopy(chess_board)
+        
+        val = self.minVal(sim_board, move, you, opp, a, b, i, start_time, move)
 
-          execute_move(sim_board, move, you)
-          
-          
-          val = self.minVal(sim_board, move, you, opp, a, b, i, start_time)
-
-          if val > best_score:
-            best_score = val
-            best_move = move  
-
+        if val > best_score:
+          best_score = val
+          best_move = move  
+    print(best_score)
     # for move in legal_moves:
       
     #   pieces = np.count_nonzero(chess_board)
@@ -131,48 +122,63 @@ class StudentAgent(Agent):
   
   
 
-  def maxVal(self, board, move, you, opp, a, b, i, start_time):
+  def maxVal(self, board, move, you, opp, a, b, i, start_time,og_move):
     time_taken = time.time() - start_time
 
     if i == 0 or time_taken > 1.85:
       # sim_board = deepcopy(board)
       # execute_move(sim_board, move, opp)
-      return self.evalMove(board, move, you, opp, i)
-    
-    for move in get_valid_moves(board, you):
-      sim_board = deepcopy(board)
-    
-      execute_move(sim_board, move, you)
+      return self.evalMove(board, move, you, opp, i, og_move)
+    legal_moves = get_valid_moves(board, you)
+    move_set = self.split_moves(legal_moves)
 
-      a = max(a, self.minVal(sim_board, move, you, opp, a, b, i - 1, start_time))
+    for moves in move_set:
+      for move in moves:
+        
+        sim_board = deepcopy(board)
       
-      if a >= b:
-        return b
+        execute_move(sim_board, move, you)
+        if self.board_checker(sim_board):
+          continue
+        else:
+          self.boards.append(sim_board)
+        a = max(a, self.minVal(sim_board, move, you, opp, a, b, i - 1, start_time,og_move))
+        
+        if a >= b:
+          return b
        
     return a
     
  
-  def minVal(self, board, move, you, opp, a, b, i, start_time):
+  def minVal(self, board, move, you, opp, a, b, i, start_time,og_move):
     time_taken = time.time() - start_time
 
     if i == 0 or time_taken > 1.85:
       # sim_board = deepcopy(board)
       # execute_move(sim_board, move, you)
-      return self.evalMove(board, move, you, opp, i)
+      return self.evalMove(board, move, you, opp, i, og_move)
     
-    for move in get_valid_moves(board, opp):
-      sim_board = deepcopy(board)
- 
-      execute_move(sim_board, move, opp)
+    legal_moves = get_valid_moves(board, opp)
+    move_set = self.split_moves(legal_moves)
 
-      b = min(b, self.maxVal(sim_board, move, you, opp, a, b, i - 1, start_time))
-      
-      if a >= b:
-        return a
-       
+    for moves in move_set:
+      for move in moves:
+        
+        sim_board = deepcopy(board)
+        execute_move(sim_board, move, opp)
+        
+        if self.board_checker(sim_board):
+          continue
+        else:
+          self.boards.append(sim_board)
+        b = min(b, self.maxVal(sim_board, move, you, opp, a, b, i - 1, start_time,og_move))
+        
+        if a >= b:
+          return a
+        
     return b
   
-  def evalMove(self, board, move, you, opp, i):
+  def evalMove(self, board, move, you, opp, i, og_move):
     finishing_move = self.last_move_win(board, you, opp)
     player_count = np.count_nonzero(board == you)
     opp_count = np.count_nonzero(board == opp)
@@ -180,27 +186,49 @@ class StudentAgent(Agent):
     corner_bonus = 0
     n = board.shape[0]
     
-    mobility_penalty = self.mobility(board, you, opp)
-   
-    gap_penalty = self.gap_fill(board, move, you, opp) * 2
+    mobility_penalty = self.mobility(board, you, opp) * 2
+    gap_defender = self.gap_defender(board, og_move, you, opp) * 20
+    gap_offender = self.gap_offender(board, og_move, you, opp) * 10
 
-    edge_bonus = self.edge_bonus(board, you) * 5
+    # gap_penalty = 0
+    edge_bonus = self.edge_bonus(board, you) * 20 * 0
+    center_bonus = self.center_bonus(board, you) * 2 * 0
+
+    move_bonus = self.move_bonus(move, you) * 5 * 0
+
+    total_score = (score_diff + 
+                   gap_offender + 
+                   gap_defender + 
+                   corner_bonus + 
+                   mobility_penalty +
+                   edge_bonus +  
+                   finishing_move + 
+                   center_bonus + 
+                   move_bonus
+                   )
     
-    return score_diff + gap_penalty + corner_bonus + mobility_penalty + edge_bonus
+    return total_score
   
-
+  def evalMove1(self, board, move, you, opp, i, og_move):
+    finishing_move = self.last_move_win(board, you, opp)
+    player_count = np.count_nonzero(board == you)
+    opp_count = np.count_nonzero(board == opp)
+    score_diff = player_count - opp_count
+    return score_diff + finishing_move
 
   def last_move_win(self, board, you, opp):
-    you_pts = np.count_nonzero(board == you)
-    opp_pts = np.count_nonzero(board == opp)
-    return 33550336 * (you_pts - opp_pts)
+    if check_endgame(board)[0]:
+      you_pts = np.count_nonzero(board == you)
+      opp_pts = np.count_nonzero(board == opp)
+      return 33550336 * (you_pts - opp_pts)
+    return 0
 
   def mobility(self, board, you, opp):
     opp_moves = len(get_valid_moves(board, opp))
     you_moves = len(get_valid_moves(board, you))
-    return you_moves - opp_moves
+    return -opp_moves
   
-  def gap_fill(self, board, move, you, opp):
+  def gap_defender(self, board, move, you, opp):
     n = board.shape[0] 
     gap_penalty = 0
    
@@ -211,7 +239,37 @@ class StudentAgent(Agent):
         ( 0,-1),          ( 0, 1),
         ( 1,-1), ( 1, 0), ( 1, 1)
     ]
-    
+ 
+    if (dest_col - at_col) == 2 or (dest_row - at_row) == 2:
+      for row in range(n):
+        for col in range(n):
+          if board[row][col] == 0:
+            opp_close_by = 0
+
+            for row_diff, col_diff in dir_coords:
+              opp_pos = row + row_diff ,  col + col_diff
+            
+              if 0 <= opp_pos[0] < n and 0 <= opp_pos[1] < n:
+                if board[opp_pos[0], opp_pos[1]] == you:
+                  opp_close_by += 1
+            if opp_close_by >= 5:
+              gap_penalty -= opp_close_by
+            
+
+    return gap_penalty
+
+  def gap_offender(self, board, move, you, opp):
+    n = board.shape[0] 
+    gap_penalty = 0
+   
+    at_row, at_col = move.get_src()
+    dest_row, dest_col = move.get_dest()
+    dir_coords = [
+        (-1,-1), (-1, 0), (-1, 1),
+        ( 0,-1),          ( 0, 1),
+        ( 1,-1), ( 1, 0), ( 1, 1)
+    ]
+        
     for row in range(n):
       for col in range(n):
         if board[row][col] == you:
@@ -221,11 +279,10 @@ class StudentAgent(Agent):
             opp_pos = row + row_diff ,  col + col_diff
            
             if 0 <= opp_pos[0] < n and 0 <= opp_pos[1] < n:
-              if board[opp_pos[0], opp_pos[1]] == opp:
+              if board[opp_pos[0], opp_pos[1]] == you:
                 opp_close_by += 1
-
           
-          gap_penalty -= opp_close_by 
+          gap_penalty += opp_close_by 
 
     return gap_penalty
     # if board[dest_row][dest_col] == 0:
@@ -272,15 +329,74 @@ class StudentAgent(Agent):
 
     edge_bonus = sum(1 for (i, j) in edges if board[i, j] == you)
     return edge_bonus
+
+  def center_bonus(self, board, you):
+    return 0
+    n = board.shape[0] 
+    center = [
+      (n//2 - 1, n//2 -1), (n//2 - 1, n//2), (n//2 - 1, n//2 + 1), 
+      (n//2, n//2 - 1),        (n//2, n//2), (n//2,n//2 + 1),
+      (n//2 + 1, n//2 -1), (n//2 + 1, n//2), (n//2 + 1, n//2 + 1)
+    ]
+    center_bonus = sum(1 for (i, j) in center if board[i, j] == you)
+    return center_bonus
   
+  def move_bonus(self, move, you):
+    at_row, at_col = move.get_src()
+    dest_row, dest_col = move.get_dest()
+
+    if (dest_col - at_col) == 2 or (dest_row - at_row) == 2:
+      return -5
+    else:
+      return 0
+
+  def split_moves(self, moves):
+    
+    duplicate_moves = []
+    jump_moves = []
+
+    for move in moves:
+      at_row, at_col = move.get_src()
+      dest_row, dest_col = move.get_dest()
+
+      if dest_row - at_row == 2 or dest_col - at_col == 2:
+        jump_moves.append(move)
+      else:
+        duplicate_moves.append(move)
+
+    move_set = [duplicate_moves, jump_moves]
+    return move_set
 
 
 
+  def board_checker(self, board):
+    n = board.shape[0]
+    
+    for old_board in self.boards:
+      return False
+      if np.array_equal(old_board, board):
+        return True
+   
+        
 
+      # count = 0
+      # flag = False
+      # for row in range(n):
+      #   for col in range(n):
+      #     if not old_board[row][col] == board[row][col]:
+      #       flag = True
+      #     else:
+      #       count += 1
 
-
-
-
+      #     if flag:
+      #       break
+      #   if flag:
+      #     break
+      # if count == n**2:
+      #   print("DUPLICATE MOVE FOUND")
+      #   return True
+      
+    return False
 
   def evalMove2(self, board, move, you, opp, i):
     if check_endgame(board):
@@ -339,6 +455,3 @@ class StudentAgent(Agent):
     return score_diff + jmp_move + mobility_penalty
 
         
-
-  
-
