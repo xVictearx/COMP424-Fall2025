@@ -125,7 +125,7 @@ class StudentAgent(Agent):
   def maxVal(self, board, move, you, opp, a, b, i, start_time,og_move):
     time_taken = time.time() - start_time
 
-    if i == 0 or time_taken > 1.85:
+    if i == 0 or time_taken > 1.8:
       # sim_board = deepcopy(board)
       # execute_move(sim_board, move, opp)
       return self.evalMove(board, move, you, opp, i, og_move)
@@ -153,7 +153,7 @@ class StudentAgent(Agent):
   def minVal(self, board, move, you, opp, a, b, i, start_time,og_move):
     time_taken = time.time() - start_time
 
-    if i == 0 or time_taken > 1.85:
+    if i == 0 or time_taken > 1.8:
       # sim_board = deepcopy(board)
       # execute_move(sim_board, move, you)
       return self.evalMove(board, move, you, opp, i, og_move)
@@ -186,15 +186,15 @@ class StudentAgent(Agent):
     corner_bonus = 0
     n = board.shape[0]
     
-    mobility_penalty = self.mobility(board, you, opp) * 2
+    mobility_penalty = self.mobility(board, you, opp) * 2 * 0
     gap_defender = self.gap_defender(board, og_move, you, opp) * 20
     gap_offender = self.gap_offender(board, og_move, you, opp) * 10
 
     # gap_penalty = 0
-    edge_bonus = self.edge_bonus(board, you) * 20 * 0
-    center_bonus = self.center_bonus(board, you) * 2 * 0
+    edge_bonus =  20 * 0 #* self.edge_bonus(board, you) 
+    center_bonus =  2 * 0 #* self.center_bonus(board, you) 
 
-    move_bonus = self.move_bonus(move, you) * 5 * 0
+    move_bonus =  10 * self.move_bonus(move, you) 
 
     total_score = (score_diff + 
                    gap_offender + 
@@ -241,19 +241,30 @@ class StudentAgent(Agent):
     ]
  
     if (dest_col - at_col) == 2 or (dest_row - at_row) == 2:
-      for row in range(n):
-        for col in range(n):
-          if board[row][col] == 0:
+      if board[at_row][at_col] == 0:
             opp_close_by = 0
 
             for row_diff, col_diff in dir_coords:
-              opp_pos = row + row_diff ,  col + col_diff
+              opp_pos = at_row + row_diff ,  at_col + col_diff
             
               if 0 <= opp_pos[0] < n and 0 <= opp_pos[1] < n:
                 if board[opp_pos[0], opp_pos[1]] == you:
                   opp_close_by += 1
             if opp_close_by >= 5:
               gap_penalty -= opp_close_by
+      # for row in range(n):
+      #   for col in range(n):
+      #     if board[row][col] == 0:
+      #       opp_close_by = 0
+
+      #       for row_diff, col_diff in dir_coords:
+      #         opp_pos = row + row_diff ,  col + col_diff
+            
+      #         if 0 <= opp_pos[0] < n and 0 <= opp_pos[1] < n:
+      #           if board[opp_pos[0], opp_pos[1]] == you:
+      #             opp_close_by += 1
+      #       if opp_close_by >= 5:
+      #         gap_penalty -= opp_close_by
             
 
     return gap_penalty
