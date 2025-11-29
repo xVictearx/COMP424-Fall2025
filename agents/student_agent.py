@@ -186,15 +186,15 @@ class StudentAgent(Agent):
     corner_bonus = 0
     n = board.shape[0]
     
-    mobility_penalty = self.mobility(board, you, opp) * 2 * 0
-    gap_defender = self.gap_defender(board, og_move, you, opp) * 20
-    gap_offender = self.gap_offender(board, og_move, you, opp) * 10
+    mobility_penalty = 2 * 0 * self.mobility(board, you, opp)  
+    gap_defender =  20 * 0 * self.gap_defender(board, og_move, you, opp) 
+    gap_offender = 10 * 0 * self.gap_offender(board, og_move, you, opp) 
 
     # gap_penalty = 0
     edge_bonus =  20 * 0 #* self.edge_bonus(board, you) 
     center_bonus =  2 * 0 #* self.center_bonus(board, you) 
 
-    move_bonus =  10 * self.move_bonus(move, you) 
+    move_bonus =  10 * 0#* self.move_bonus(move, you) 
 
     total_score = (score_diff + 
                    gap_offender + 
@@ -226,7 +226,7 @@ class StudentAgent(Agent):
   def mobility(self, board, you, opp):
     opp_moves = len(get_valid_moves(board, opp))
     you_moves = len(get_valid_moves(board, you))
-    return -opp_moves
+    return you_moves-opp_moves
   
   def gap_defender(self, board, move, you, opp):
     n = board.shape[0] 
@@ -342,7 +342,7 @@ class StudentAgent(Agent):
     return edge_bonus
 
   def center_bonus(self, board, you):
-    return 0
+   
     n = board.shape[0] 
     center = [
       (n//2 - 1, n//2 -1), (n//2 - 1, n//2), (n//2 - 1, n//2 + 1), 
