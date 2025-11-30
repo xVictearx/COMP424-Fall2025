@@ -13,10 +13,10 @@ EVAL_WEIGHTS = {
     "big_x": {
         "score_diff":   1,   # material still matters
         "gap_offender": 35,   # small reward for blobs
-        "gap_defender": 30,   # mild penalty for bad jumps leaving holes
-        "move_bonus":   40,   # jumps slightly punished (your move_bonus is 0 or -5)
+        "gap_defender": 35,   # mild penalty for bad jumps leaving holes
+        "move_bonus":   45,   # jumps slightly punished (your move_bonus is 0 or -5)
         #"board_bonus":  0.0,   # no special positional mask
-        "mobility": 5,   # open so mobility important
+        "mobility": 10,   # open so mobility important
         "obst_bonus":  0,
         "obstacle": []
     },
@@ -36,11 +36,11 @@ EVAL_WEIGHTS = {
     # board[1,3] == 3
     "plus2": {
         "score_diff":   1,
-        "gap_offender": 30,   # like plus1 but a bit stronger clustering
-        "gap_defender": 35,
-        "move_bonus":   40,
+        "gap_offender": 35,   # like plus1 but a bit stronger clustering
+        "gap_defender": 30,
+        "move_bonus":   80,
         #"board_bonus":  1.0,
-        "mobility": 5,   # open so mobility important
+        "mobility": 0,   # open so mobility important
         "obst_bonus":  0,
         "obstacle": []
     },
@@ -48,7 +48,7 @@ EVAL_WEIGHTS = {
     # board[2,2] == 3
     "point4": {
         "score_diff":   1,
-        "gap_offender": 40,   # islands-ish: safe blobs good
+        "gap_offender": 30,   # islands-ish: safe blobs good
         "gap_defender": 35,   # really punish dangerous gaps
         "move_bonus":   60,
         #"board_bonus":  1.2,   # central-ish control good
@@ -60,9 +60,9 @@ EVAL_WEIGHTS = {
     # board[1,2] == 3
     "circle": {
         "score_diff":   1,
-        "gap_offender": 45,   # ring control
-        "gap_defender": 15,
-        "move_bonus":   10,
+        "gap_offender": 35,   # ring control
+        "gap_defender": 35,
+        "move_bonus":   20,
         #"board_bonus":  1.0,   # if you have a ring bonus mask later
         "mobility": 5,   # open so mobility important
         "obst_bonus":  0,
@@ -159,7 +159,8 @@ class StudentAgent(Agent):
     boardt_type = self.get_board_type(chess_board)
     move_set = []
     
-    if self.turns < 3 and (boardt_type == "wall" or boardt_type == "watch_sides" or boardt_type == "circle"):
+    # if self.turns < 3 and (boardt_type == "wall" or boardt_type == "watch_sides" or boardt_type == "circle"):
+    if self.turns < 3 :
       # if boardt_type == "wall" :
       #   self.turns = 2
       self.is_difficult = True
@@ -170,6 +171,7 @@ class StudentAgent(Agent):
       move_set = self.split_moves(legal_moves)
 
       # print(move_set)
+      
     for moves in move_set:
       for move in moves:
         
@@ -380,7 +382,7 @@ class StudentAgent(Agent):
         ( 1,-1), ( 1, 0), ( 1, 1)
     ]
  
-    if (dest_col - at_col) == 2 or (dest_row - at_row) == 2:
+    if abs(dest_col - at_col) == 2 or abs(dest_row - at_row) == 2:
       if board[at_row][at_col] == 0:
             opp_close_by = 0
 
@@ -388,12 +390,9 @@ class StudentAgent(Agent):
               opp_pos = at_row + row_diff ,  at_col + col_diff
             
               if 0 <= opp_pos[0] < n and 0 <= opp_pos[1] < n:
-                if self.get_board_type(board) == "wall":
-                  if board[opp_pos[0], opp_pos[1]] == you or board[opp_pos[0], opp_pos[1]] == 3:
+                 if board[opp_pos[0], opp_pos[1]] == you or board[opp_pos[0], opp_pos[1]] == 3:
                     opp_close_by += 1
-                else:
-                  if board[opp_pos[0], opp_pos[1]] == you :
-                    opp_close_by += 1
+                
             if opp_close_by >= 5:
               gap_penalty -= opp_close_by
   
@@ -422,37 +421,13 @@ class StudentAgent(Agent):
             opp_pos = row + row_diff ,  col + col_diff
            
             if 0 <= opp_pos[0] < n and 0 <= opp_pos[1] < n:
-              if self.get_board_type(board) == "wall":
-                if board[opp_pos[0], opp_pos[1]] == you or board[opp_pos[0], opp_pos[1]] == 3:
-                  opp_close_by += 1
-              else:
-                if board[opp_pos[0], opp_pos[1]] == you :
-                  opp_close_by += 1
+              if board[opp_pos[0], opp_pos[1]] == you or board[opp_pos[0], opp_pos[1]] == 3:
+                    opp_close_by += 1
           
           gap_penalty += opp_close_by 
 
     return gap_penalty
-    # if board[dest_row][dest_col] == 0:
-    #   if n-2 > dest_row >= 1 and n-2 > dest_col >= 1 :
-    #       if board[dest_row - 1][dest_col] == opp:
-    #         count += 1
-    #       if board[dest_row + 1][dest_col] == opp:
-    #         count += 1
-    #       if board[dest_row][dest_col - 1] == opp:
-    #         count += 1
-    #       if board[dest_row][dest_col - 1] == opp:
-    #         count += 1
 
-    #       if board[dest_row - 1][dest_col - 1] == opp:
-    #         count += 1
-    #       if board[dest_row + 1][dest_col - 1] == opp:
-    #         count += 1
-    #       if board[dest_row - 1][dest_col + 1] == opp:
-    #         count += 1
-    #       if board[dest_row + 1][dest_col + 1] == opp:
-    #         count += 1
-      
-    return count
   
   def edge_bonus(self, board, you):
     n = board.shape[0] 
@@ -506,18 +481,14 @@ class StudentAgent(Agent):
     for move in moves:
       at_row, at_col = move.get_src()
       dest_row, dest_col = move.get_dest()
-      if self.is_difficult:
-        if abs(dest_row - at_row) == 2 or abs(dest_col - at_col) == 2:
-          jump_moves.append(move)
+      
+      if abs(dest_row - at_row) == 2 or abs(dest_col - at_col) == 2:
+        jump_moves.append(move)
 
-        else:
-          duplicate_moves.append(move)
+      else:
+        duplicate_moves.append(move)
 
-      else: 
-        if dest_row - at_row == 2 or dest_col - at_col == 2:
-          jump_moves.append(move)
-        else:
-          duplicate_moves.append(move)
+     
 
     move_set = [duplicate_moves, jump_moves]
     return move_set
