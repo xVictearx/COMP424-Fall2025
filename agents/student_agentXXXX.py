@@ -12,11 +12,11 @@ EVAL_WEIGHTS = {
     # board[1,1] == 3
     "big_x": {
         "score_diff":   1,   # material still matters
-        "gap_offender": 35,   # small reward for blobs
+        "gap_offender": 25,   # small reward for blobs
         "gap_defender": 35,   # mild penalty for bad jumps leaving holes
-        "move_bonus":   55,   # jumps slightly punished (your move_bonus is 0 or -5)
+        "move_bonus":   0,   # jumps slightly punished (your move_bonus is 0 or -5)
         #"board_bonus":  0.0,   # no special positional mask
-        "mobility": 10,   # open so mobility important
+        "mobility": 5,   # open so mobility important
         "obst_bonus":  0,
         "obstacle": []
     },
@@ -106,9 +106,9 @@ EVAL_WEIGHTS = {
     # else: empty / no obstacles
     "empty": {
         "score_diff":   1,
-        "gap_offender": 10,   # moderate value for clustering
+        "gap_offender": 15,   # moderate value for clustering
         "gap_defender": 20,   # avoid terrible gaps but not overkill
-        "move_bonus":   30,   # your original: jumps punished by full move_bonus
+        "move_bonus":   35,   # your original: jumps punished by full move_bonus
         #"board_bonus":  0.5,   # mild center-ish preference if you use it
         "mobility": 5,   # open so mobility important
         "obst_bonus":  0,
@@ -213,7 +213,7 @@ class StudentAgent(Agent):
   def maxVal(self, board, move, you, opp, a, b, i, start_time,og_move):
     time_taken = time.time() - start_time
 
-    if i == 0 or time_taken > 1.75:
+    if i == 0 or time_taken > 1.8:
       # sim_board = deepcopy(board)
       # execute_move(sim_board, move, opp)
       return self.evalMove(board, move, you, opp, i, og_move)
@@ -239,7 +239,7 @@ class StudentAgent(Agent):
   def minVal(self, board, move, you, opp, a, b, i, start_time,og_move):
     time_taken = time.time() - start_time
 
-    if i == 0 or time_taken > 1.75:
+    if i == 0 or time_taken > 1.8:
       # sim_board = deepcopy(board)
       # execute_move(sim_board, move, you)
       return self.evalMove(board, move, you, opp, i, og_move)
@@ -266,6 +266,8 @@ class StudentAgent(Agent):
     btype = self.get_board_type(board)
     
     finishing_move = self.last_move_win(board, you, opp)
+    if finishing_move == 33550336:
+      return finishing_move
     player_count = np.count_nonzero(board == you)
     opp_count = np.count_nonzero(board == opp)
     score_diff = player_count - opp_count
@@ -315,7 +317,7 @@ class StudentAgent(Agent):
     if check_endgame(board)[0]:
       you_pts = np.count_nonzero(board == you)
       opp_pts = np.count_nonzero(board == opp)
-      return 33550336 * (you_pts - opp_pts)
+      return 33550336 
     return 0
 
   def mobility(self, board, you, opp):
@@ -338,20 +340,29 @@ class StudentAgent(Agent):
         ( 0,-1),          ( 0, 1),
         ( 1,-1), ( 1, 0), ( 1, 1)
     ]
- 
-    if abs(dest_col - at_col) == 2 or abs(dest_row - at_row) == 2:
-      if board[at_row][at_col] == 0:
-            opp_close_by = 0
+    for row_diff, col_diff in dir_coords:
+      pos = at_row + row_diff ,  at_col + col_diff
+     
+      if 0 <= pos[0] < n and 0 <= pos[1] < n:
+        if board[pos[0]][pos[1]] in [you, i]:
+              gap_penalty -= 1
+        elif board[pos[0]][pos[1]] == 0:
+              gap_penalty += 0
+        
+    
+    # if abs(dest_col - at_col) == 2 or abs(dest_row - at_row) == 2:
+    #   if board[at_row][at_col] == 0:
+    #         opp_close_by = 0
 
-            for row_diff, col_diff in dir_coords:
-              opp_pos = at_row + row_diff ,  at_col + col_diff
+    #         for row_diff, col_diff in dir_coords:
+    #           opp_pos = at_row + row_diff ,  at_col + col_diff
               
-              if 0 <= opp_pos[0] < n and 0 <= opp_pos[1] < n:
-                 if board[opp_pos[0], opp_pos[1]] == you or board[opp_pos[0], opp_pos[1]] == i:
-                    opp_close_by += 1
+    #           if 0 <= opp_pos[0] < n and 0 <= opp_pos[1] < n:
+    #              if board[opp_pos[0], opp_pos[1]] == you or board[opp_pos[0], opp_pos[1]] == i:
+    #                 opp_close_by += 1
                 
-            if opp_close_by >= 5:
-              gap_penalty -= opp_close_by
+    #         if opp_close_by >= 5:
+    #           gap_penalty -= opp_close_by
   
             
 
@@ -370,20 +381,26 @@ class StudentAgent(Agent):
         ( 0,-1),          ( 0, 1),
         ( 1,-1), ( 1, 0), ( 1, 1)
     ]
-        
-    for row in range(n):
-      for col in range(n):
-        if board[row][col] == you:
-          opp_close_by = 0
+    for row_diff, col_diff in dir_coords:
+      pos = dest_row + row_diff ,  dest_col + col_diff
+     
+      if 0 <= pos[0] < n and 0 <= pos[1] < n:
+        if board[pos[0]][pos[1]] in [you, i]:
+              gap_penalty += 1    
+              
+    # for row in range(n):
+    #   for col in range(n):
+    #     if board[row][col] == you:
+    #       opp_close_by = 0
 
-          for row_diff, col_diff in dir_coords:
-            opp_pos = row + row_diff ,  col + col_diff
+    #       for row_diff, col_diff in dir_coords:
+    #         opp_pos = row + row_diff ,  col + col_diff
            
-            if 0 <= opp_pos[0] < n and 0 <= opp_pos[1] < n:
-              if board[opp_pos[0], opp_pos[1]] == you or board[opp_pos[0], opp_pos[1]] == i:
-                    opp_close_by += 1
+    #         if 0 <= opp_pos[0] < n and 0 <= opp_pos[1] < n:
+    #           if board[opp_pos[0], opp_pos[1]] == you or board[opp_pos[0], opp_pos[1]] == i:
+    #                 opp_close_by += 1
           
-          gap_penalty += opp_close_by 
+    #       gap_penalty += opp_close_by 
 
     return gap_penalty
 
