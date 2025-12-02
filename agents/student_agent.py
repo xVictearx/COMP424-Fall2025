@@ -177,7 +177,7 @@ class StudentAgent(Agent):
     time_taken = time.time() - start_time
 
     if i == 0 or time_taken > 1.8:#cutoff condition
-      return self.evalMove(board, move, you, opp, i, og_move)
+      return self.evalMove(board, move, you, opp)
     
     legal_moves = get_valid_moves(board, you)
     move_set = self.split_moves(legal_moves)
@@ -199,7 +199,7 @@ class StudentAgent(Agent):
     time_taken = time.time() - start_time
 
     if i == 0 or time_taken > 1.8:
-      return self.evalMove(board, move, you, opp, i, og_move)
+      return self.evalMove(board, move, you, opp)
     
     legal_moves = get_valid_moves(board, opp)
     move_set = self.split_moves(legal_moves)
@@ -218,7 +218,7 @@ class StudentAgent(Agent):
   
 
 
-  def evalMove(self, board, move, you, opp, i, og_move):
+  def evalMove(self, board, move, you, opp):
     if check_endgame(board)[0]:
       return 3550336 #big number (5th perfect number)
     
